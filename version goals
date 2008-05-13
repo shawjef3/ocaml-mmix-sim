@@ -1,0 +1,27 @@
+*version 1
+**memory
+**control and integer instructions
+**assembly parser
+**assembly lexer
+**binary generator
+**simulation (every instruction takes 1 tick)
+**GUI
+
+*version 2
+**floating point instructions
+**trip/trap
+**break points
+**break conditions
+
+*version 3
+**virtual physical addressing
+**clock-cycle accurate simulation
+**editable per-instruction cost
+**cost reporting
+
+*version 4
+**hardware simulation
+***eg, VGA, console, other I/O
+***hard disk image
+***ISO image
+***extensible
