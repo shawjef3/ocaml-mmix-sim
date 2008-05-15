@@ -1,6 +1,58 @@
 open Labltk
 open Tk
 
+let file = ref None
+
+let new_file t () =
+  file := None;
+  Text.delete t ~start:((`Linechar (0,0),[])) ~stop:(`End,[]);;
+  
+
+let open_file t () =
+  let filename = getOpenFile () in
+  try
+    (
+      let inchan = open_in filename in
+      let accum = ref [] in
+      (
+	try
+	  while true do
+	    accum := (input_line inchan)::!accum
+	  done
+	with End_of_file -> file := Some filename;
+      );
+      let accum = String.concat "\n" !accum in
+      Text.delete t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]);
+      Text.insert ~index:(`End,[]) ~text:accum t;
+    )
+  with
+    _ -> ()
+
+let save_file t () =
+  (
+    match !file with
+      None ->
+	file := Some (getSaveFile ())
+    | Some f -> ();
+  );
+  try
+    match !file with
+None -> ()
+    | Some filename ->
+    let outchan = open_out filename in
+    output_string outchan (Text.get t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]));
+    close_out outchan;
+  with
+    _ -> ()
+(*
+let copy () =
+  Clipboard.clear ();
+  Clipboard.append ~data:(Selection.get ()) ();;
+
+let paste pastefun =
+  Selection.get ~selection:"CLIPBOARD"
+*)
+
 let editing errorfun top =
   let f = Frame.create top in
   let t = Text.create ~wrap:`None ~width:40 ~background:`White f in
@@ -92,14 +144,14 @@ let register_view top rnum name =
 let menus errorfun top =
   let mbar = Menu.create top in
   let mfile = Menu.create ~tearoff:false mbar in
-  let medit = Menu.create ~tearoff:false mbar in
+(*  let medit = Menu.create ~tearoff:false mbar in
   let mrun = Menu.create ~tearoff:false mbar in
-  let mhz = Menu.create ~tearoff:false mbar in
+  let mhz = Menu.create ~tearoff:false mbar in*)
   Menu.add_command ~label:"New" mfile;
   Menu.add_command ~label:"Save" mfile;
   Menu.add_command ~label:"Open" mfile;
   Menu.add_command ~label:"Quit" ~command:closeTk mfile;
-  Menu.add_command ~label:"Cut" medit;
+(*  Menu.add_command ~label:"Cut" medit;
   Menu.add_command ~label:"Copy" medit;
   Menu.add_command ~label:"Paste" medit;
   Menu.add_command ~label:"Assemble" mrun;
@@ -108,13 +160,13 @@ let menus errorfun top =
     (fun hz ->
        Menu.add_command ~label:hz mhz
     )
-    ("a lot"::"1/2"::(List.map string_of_int [1;2;4;8;16]));
+    ("a lot"::"1/2"::(List.map string_of_int [1;2;4;8;16]));*)
   Menu.add_cascade ~menu:mfile ~label:"File" mbar;
   Menu.add_cascade ~menu:medit ~label:"Edit" mbar;
-  Menu.add_cascade ~menu:mrun ~label:"Run" mbar;
-  Menu.add_cascade ~menu:mhz ~label:"Hz" mbar;
+(*  Menu.add_cascade ~menu:mrun ~label:"Run" mbar;
+  Menu.add_cascade ~menu:mhz ~label:"Hz" mbar;*)
   Toplevel.configure ~menu:mbar top;
-  ()
+  (mfile, medit)
 
 let memory_view top height =
   let f = Frame.create top in
@@ -213,7 +265,10 @@ let bring_together () =
   let (specialframe,changer) = register_view top 256 "main registers" in
   let (registerframe,changes) = register_view top 32 "special registers" in
   let (memframe,membutton,set_view,set_at) = memory_view top 10 in
-  menus display_error top;
+  let (filemenu, editmenu) = menus display_error top in
+  Menu.configure_command ~command:(new_file t) filemenu ~(`At 0);
+  Menu.configure_command ~command:(save_file t) filemenu ~(`At 1);
+  Menu.configure_command ~command:(open_file t) filemenu ~(`At 2);
   let reset_error () = display_error "Ready" in
   reset_error ();
   Button.configure
