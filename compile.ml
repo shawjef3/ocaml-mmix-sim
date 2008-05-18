@@ -6,7 +6,6 @@ type todo =
 
 let todo =
   [
-    Custom "ocaml compile_64.ml";
     MLI "memory";
     MLI "machine";
     MLI "parsertypes";
@@ -17,7 +16,7 @@ let todo =
     MLI "instructions_map";
     MLI "instruction_types";
     MLI "string_to_hex";
-    Custom "ocamlc -custom -o mmixsim uInt64.o uInt64.cmo memory.cma machine.cma -I +labltk labltk.cma parser.cma lexer.cma parsertypes.cma instructions_dummy.cma instructions.cma instructions_map.cma instruction_types.cma string_to_hex.cma str.cma ui.ml"
+    Custom "ocamlc -custom -o mmixsim uInt64.cma memory.cma machine.cma -I +labltk labltk.cma parser.cma lexer.cma parsertypes.cma instructions_dummy.cma instructions.cma instructions_map.cma instruction_types.cma string_to_hex.cma str.cma ui.ml"
   ]
 
 let commands =
