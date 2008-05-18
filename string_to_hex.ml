@@ -11,88 +11,85 @@ module SMap = Map.Make(String)
 
 let four = UInt64.of_int 4
 
-let incr_addr = UInt64.add four
+let incr_two = UInt64.add two
+
+let incr_four = UInt64.add four
 
 let ophex s = UInt64.shift_left (hex_of_name s) 24
 
-type pos = One | Two | Three
+let pure = function
+    Number n -> UInt64.of_string_base n 10
+  | Number16 n -> UInt64.of_string_base n 16
+  | Number8 n -> UInt64.of_string_base n 8
+  | Number2 n -> UInt64.of_string_base n 2
 
-let spechex h =
-  let revmap = List.map (function (a,b) -> (b,a)) special_map in
-  List.assoc h revmap
+let rec primary = function
+    Symbol s -> `Replace s
+  | Constant c -> `Immediate c
+  | At -> `At
+  | Negate n -> `Delayed (UInt64.complement, primary n)
+  | Negative m -> `Delayed ((UInt64.sub (UInt64.zero)), primary m)
+  | Register p -> `Register p
+  | Forward f -> `Forward f
+  | Backward b -> `Back b
+  | Char s -> `Bytes [s]
+  | Str d -> `Bytes (let l = String.length d in
+		     let accum = ref [] in
+		    for i = l-1 downto 0 do
+		      accum := d.[i]::!accum
+		    done;
+		    !accum)
 
-let insert pos h =
-  UInt64.shift_left
-    h
-    (match pos with
-	 Three -> 0
-       | Two -> 8
-       | One -> 16
+let rec term x =
+  match (function
+      Term t -> `One (primary t)
+    | Mul (x,y) -> `Two (UInt64.mul, (x,y))
+    | Div (x,y) -> `Two (UInt64.div, (x,y))
+    | FracDiv (x,y) ->
+	`Two ((fun x y ->
+		 UInt64.mul
+		   (UInt64.div UInt64.max y)
+		   x),
+	      (x,y))
+    | Rem (x,y) -> `Two (UInt64.rem, (x,y))
+    | SLeft (x,y) -> `Two ((fun x y -> UInt64.shift_left x (UInt64.to_int y)), (x,y))
+    | SRight (x,y) -> `Two ((fun x y -> UInt64.shift_right x (UInt64.to_int y)), (x,y))
+	)
+    x
+  with
+    `One t -> `One t
+  | `Two (op,(x,y)) -> `Two (op, term x, primary y)
+
+let rec expression x =
+  match
+    (function
+	 Expression e -> `Nothing (term e)
+       | And (x,y) -> `Two (UInt64.logand, (x,y))
+       | XOr (x,y) -> `Two (UInt64.logxor, (x,y))
+       | Plus (x,y) -> `Two (UInt64.add, (x,y))
+       | Minus (x,y) -> `Two (UInt64.sub, (x,y))
     )
+      x
+  with
+    `Nothing e -> `Nothing e
+  | `Two (op,(x,y)) -> `Two (op, expression x, term y)
 
-type arg_temp = WF of UInt64.t | NWF of string * pos
+let instruction =
+  function
+      Instruction (name,args) -> `I1 (name, List.map expression args)
+    | LInstruction (label,name,args) -> `I2 (label,name, List.map expression args)
+    | L2Instruction (locallabel, name, args) ->
+	`I3 (locallabel, name, List.map expression args)
+    | Empty -> `I0
 
-let handle_arg pos = function
-    Register r ->
-      WF (insert pos (UInt64.of_int r))
-  | Special s ->
-      WF (insert pos (UInt64.of_int (spechex s)))
-  | Location l ->
-      NWF (l, pos)
-  | Immediate i ->
-     WF (insert pos i)
-
-let compose op = function
-    WF a -> Complete (UInt64.logor (ophex op) a)
-  | NWF (name,pos) ->
-      Delayed ((function () -> [|name|]),
-	       function a -> UInt64.logor (ophex op) (insert pos a.(0)))
-
-let compose_aux =
-    List.fold_left
-      UInt64.logor
-      UInt64.zero
-
-let rec convert addr map = function
-    LInstruction (locname, instr, args) ->
-      let map' = SMap.add locname addr map in
-      compose addr map' instr args
-  | Instruction (instr,args) ->
-      compose addr map instr args
-  | Is (binder, bindand) ->
-      
-  | Loc (locer, locand) ->
-      
-
-let seven = UInt64.of_int 7
-let seven' = UInt64.complement seven
-let thirtytwo = UInt64.of_int 32
-
-let compose_convert start instructions =
+let program instructions =
   List.fold_right
-    (fun instr (addr,map,instraccum) ->
-       let (newmap,converted) = convert addr map instr in
-       (UInt64.add thirtytwo addr, newmap,converted::instraccum)
+    (fun a accum ->
+       match instruction a with
+	 `I0 -> accum
+       | _ as i -> i::accum
     )
     instructions
-    (UInt64.logand seven' start, SMap.empty, [])
-
-let replace map instrs =
-  List.fold_right
-    (fun instr accum ->
-       match instr with
-	   Complete c -> c::accum
-	 | Delayed (getfun, returnfun) ->
-	     let to_get = getfun () in
-	     (returnfun
-	       (Array.map
-		  (fun key ->
-		     SMap.find key map
-		  )
-		  to_get
-	       ))::accum
-    )
-    instrs
     []
 
 let load_machine_int64 start instructions m =

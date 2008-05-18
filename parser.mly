@@ -18,21 +18,19 @@
 %token Comma
 %token At
 %token EOF
+%token EOI
 %token <int> LocalBack
 %token <int> LocalForward
 %token <int> LocalLabel
 %token <char> SQuote
 %token <string> DQuote
 
-%nonassoc Symbol At EOF EOI
-%nonassoc HexPrefix OctPrefix BinPrefix Number
+%left And Plus Minus Xor Or
+%left Mul Div Rem FracDiv SLeft SRight
+
+%nonassoc HexPrefix OctPrefix BinPrefix
 %nonassoc Negate
 %nonassoc Dollar
-%nonassoc OpenParen CloseParen
-%nonassoc Comma
-
-%left Mul Div Rem FracDiv SLeft SRight
-%left And Plus Minus Xor Or
 
 %type <Parsertypes.instruction list> program
 %start program
@@ -47,7 +45,6 @@ pure : Number { Number $1 }
 primary : Symbol { Symbol $1 }
         | pure { Constant $1 }
 	| At { At }
-	| OpenParen primary CloseParen { $2 }
 	| Negate primary { Negate $2 }
 	| Minus primary { Negative $2 }
 	| Plus primary { $2 }
@@ -58,18 +55,20 @@ primary : Symbol { Symbol $1 }
 	| DQuote { Str $1 }
 
 term : primary { Term $1 }
-      | primary Mul primary { Mul ($1,$3) }
-      | primary Div primary { Div ($1,$3) }
-      | primary FracDiv primary { FracDiv ($1,$3) }
-      | primary Rem primary { Rem ($1,$3) }
-      | primary SLeft primary { SLeft ($1,$3) }
-      | primary SRight primary { SRight ($1,$3) }
+      | term Mul primary { Mul ($1,$3) }
+      | term Div primary { Div ($1,$3) }
+      | term FracDiv primary { FracDiv ($1,$3) }
+      | term Rem primary { Rem ($1,$3) }
+      | term SLeft primary { SLeft ($1,$3) }
+      | term SRight primary { SRight ($1,$3) }
+      | OpenParen term CloseParen { $2 }
 
 expression : term { Expression $1 }
-           | term And term { And ($1,$3) }
-	   | term XOr term { XOr ($1,$3) }
-	   | term Plus term { Plus ($1,$3) }
-	   | term Minus term { Minus ($1,$3) }
+           | expression And term { And ($1,$3) }
+	   | expression XOr term { XOr ($1,$3) }
+	   | expression Plus term { Plus ($1,$3) }
+	   | expression Minus term { Minus ($1,$3) }
+	   | OpenParen expression CloseParen { $2 }
 
 instr_aux : EOI { [] }
           | expression { [$1] }

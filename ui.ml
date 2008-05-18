@@ -37,13 +37,14 @@ let save_file t () =
   );
   try
     match !file with
-None -> ()
+      None -> ()
     | Some filename ->
-    let outchan = open_out filename in
-    output_string outchan (Text.get t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]));
-    close_out outchan;
+	let outchan = open_out filename in
+	output_string outchan (Text.get t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]));
+	close_out outchan;
   with
     _ -> ()
+
 (*
 let copy () =
   Clipboard.clear ();
