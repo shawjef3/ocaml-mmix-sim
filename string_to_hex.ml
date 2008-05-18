@@ -27,8 +27,6 @@ let rec primary = function
     Symbol s -> `Replace s
   | Constant c -> `Immediate c
   | At -> `At
-  | Negate n -> `Delayed (UInt64.complement, primary n)
-  | Negative m -> `Delayed ((UInt64.sub (UInt64.zero)), primary m)
   | Register p -> `Register p
   | Forward f -> `Forward f
   | Backward b -> `Back b
@@ -42,7 +40,7 @@ let rec primary = function
 
 let rec term x =
   match (function
-      Term t -> `One (primary t)
+      Term t -> `Zero (primary t)
     | Mul (x,y) -> `Two (UInt64.mul, (x,y))
     | Div (x,y) -> `Two (UInt64.div, (x,y))
     | FracDiv (x,y) ->
@@ -54,32 +52,25 @@ let rec term x =
     | Rem (x,y) -> `Two (UInt64.rem, (x,y))
     | SLeft (x,y) -> `Two ((fun x y -> UInt64.shift_left x (UInt64.to_int y)), (x,y))
     | SRight (x,y) -> `Two ((fun x y -> UInt64.shift_right x (UInt64.to_int y)), (x,y))
+    | And (x,y) -> `Two (UInt64.logand, (x,y))
+    | XOr (x,y) -> `Two (UInt64.logxor, (x,y))
+    | Plus (x,y) -> `Two (UInt64.add, (x,y))
+    | Minus (x,y) -> `Two (UInt64.sub, (x,y))
+    | Negate n -> `One (UInt64.complement, n)
+    | Negative m -> `One ((UInt64.sub (UInt64.zero)), m)
 	)
     x
   with
-    `One t -> `One t
-  | `Two (op,(x,y)) -> `Two (op, term x, primary y)
-
-let rec expression x =
-  match
-    (function
-	 Expression e -> `Nothing (term e)
-       | And (x,y) -> `Two (UInt64.logand, (x,y))
-       | XOr (x,y) -> `Two (UInt64.logxor, (x,y))
-       | Plus (x,y) -> `Two (UInt64.add, (x,y))
-       | Minus (x,y) -> `Two (UInt64.sub, (x,y))
-    )
-      x
-  with
-    `Nothing e -> `Nothing e
-  | `Two (op,(x,y)) -> `Two (op, expression x, term y)
+    `Zero t -> `Zero t
+  | `One (op, x) -> `One (op, term x)
+  | `Two (op,(x,y)) -> `Two (op, term x, term y)
 
 let instruction =
   function
-      Instruction (name,args) -> `I1 (name, List.map expression args)
-    | LInstruction (label,name,args) -> `I2 (label,name, List.map expression args)
+      Instruction (name,args) -> `I1 (name, List.map term args)
+    | LInstruction (label,name,args) -> `I2 (label,name, List.map term args)
     | L2Instruction (locallabel, name, args) ->
-	`I3 (locallabel, name, List.map expression args)
+	`I3 (locallabel, name, List.map term args)
     | Empty -> `I0
 
 let program instructions =

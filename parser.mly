@@ -25,11 +25,13 @@
 %token <char> SQuote
 %token <string> DQuote
 
-%left And Plus Minus Xor Or
-%left Mul Div Rem FracDiv SLeft SRight
 
-%nonassoc HexPrefix OctPrefix BinPrefix
-%nonassoc Negate
+%left Xor Or
+%left And
+%left SLeft SRight
+%left Plus Minus
+%left Mul Div Rem FracDiv
+%nonassoc Negate Positive Negative
 %nonassoc Dollar
 
 %type <Parsertypes.instruction list> program
@@ -45,9 +47,6 @@ pure : Number { Number $1 }
 primary : Symbol { Symbol $1 }
         | pure { Constant $1 }
 	| At { At }
-	| Negate primary { Negate $2 }
-	| Minus primary { Negative $2 }
-	| Plus primary { $2 }
 	| Dollar pure { Register $2 }
 	| LocalForward { Forward $1 }
 	| LocalBack { Backward $1 }
@@ -55,24 +54,24 @@ primary : Symbol { Symbol $1 }
 	| DQuote { Str $1 }
 
 term : primary { Term $1 }
-      | term Mul primary { Mul ($1,$3) }
-      | term Div primary { Div ($1,$3) }
-      | term FracDiv primary { FracDiv ($1,$3) }
-      | term Rem primary { Rem ($1,$3) }
-      | term SLeft primary { SLeft ($1,$3) }
-      | term SRight primary { SRight ($1,$3) }
+      | term Mul term { Mul ($1,$3) }
+      | term Div term { Div ($1,$3) }
+      | term FracDiv term { FracDiv ($1,$3) }
+      | term Rem term { Rem ($1,$3) }
+      | term SLeft term { SLeft ($1,$3) }
+      | term SRight term { SRight ($1,$3) }
+      | term And term { And ($1,$3) }
+      | term XOr term { XOr ($1,$3) }
+      | term Plus term { Plus ($1,$3) }
+      | term Minus term { Minus ($1,$3) }
+      | Minus term %prec Negative { Negative $2 }
+      | Plus term %prec Positive { $2 }
+      | Negate term { Negate $2 }
       | OpenParen term CloseParen { $2 }
 
-expression : term { Expression $1 }
-           | expression And term { And ($1,$3) }
-	   | expression XOr term { XOr ($1,$3) }
-	   | expression Plus term { Plus ($1,$3) }
-	   | expression Minus term { Minus ($1,$3) }
-	   | OpenParen expression CloseParen { $2 }
-
 instr_aux : EOI { [] }
-          | expression { [$1] }
-	  | expression Comma instr_aux { $1::($3) }
+          | term { [$1] }
+	  | term Comma instr_aux { $1::($3) }
 
 instruction : Symbol instr_aux { Instruction ($1,$2) }
 	    | Symbol Symbol instr_aux { LInstruction ($1,$2,$3) }
