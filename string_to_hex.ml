@@ -9,11 +9,53 @@ type convert =
 
 module SMap = Map.Make(String)
 
-let four = UInt64.of_int 4
+module IMap = Map.Make(struct type t = int let compare = compare end)
 
-let incr_two = UInt64.add two
+module Parser_state =
+struct
+  type ('a,'b) t =
+      {
+	at : UInt64.t;
+	numbered : IMap.t;
+	named : SMap.t;
+	commands : 'a list;
+	errors : 'b list;
+      }
 
-let incr_four = UInt64.add four
+  let init =
+    {
+      at = UInt64.zero;
+      numbered = IMap.empty;
+      named = SMap.empty;
+      commands = [];
+      errors = [];
+    }      
+
+  let two = UInt64.two
+
+  let four = UInt64.of_int 4
+
+  let eight = UInt64.of_int 8
+
+  let incr_two s = {s with at = UInt64.add two s.at}
+
+  let incr_four s = {s with at = UInt64.add four s.at}
+
+  let incr_eight s = {s with at = UInt64.add eight s.at}
+
+  type label = IL of int | SL of string
+
+  let add_command s ?(label=None) c =
+    let s =
+      match label with
+	  IL i -> {s with numbered = IMap.add i s.at s.numbered}
+	| SL s -> {s with named = IMap.add s s.at s.named}
+    in
+    {s with
+       commands = c::s.commands
+    }
+
+end
 
 let ophex s = UInt64.shift_left (hex_of_name s) 24
 
@@ -38,32 +80,34 @@ let rec primary = function
 		    done;
 		    !accum)
 
-let rec term x =
-  match (function
-      Term t -> `Zero (primary t)
-    | Mul (x,y) -> `Two (UInt64.mul, (x,y))
-    | Div (x,y) -> `Two (UInt64.div, (x,y))
-    | FracDiv (x,y) ->
-	`Two ((fun x y ->
-		 UInt64.mul
-		   (UInt64.div UInt64.max y)
-		   x),
-	      (x,y))
-    | Rem (x,y) -> `Two (UInt64.rem, (x,y))
-    | SLeft (x,y) -> `Two ((fun x y -> UInt64.shift_left x (UInt64.to_int y)), (x,y))
-    | SRight (x,y) -> `Two ((fun x y -> UInt64.shift_right x (UInt64.to_int y)), (x,y))
-    | And (x,y) -> `Two (UInt64.logand, (x,y))
-    | XOr (x,y) -> `Two (UInt64.logxor, (x,y))
-    | Plus (x,y) -> `Two (UInt64.add, (x,y))
-    | Minus (x,y) -> `Two (UInt64.sub, (x,y))
-    | Negate n -> `One (UInt64.complement, n)
-    | Negative m -> `One ((UInt64.sub (UInt64.zero)), m)
-	)
-    x
+let term x =
+  match
+    (function
+	 Term t -> `Zero (primary t)
+       | Mul (x,y) -> `Two (UInt64.mul, (x,y))
+       | Div (x,y) -> `Two (UInt64.div, (x,y))
+       | FracDiv (x,y) ->
+	   `Two ((fun x y ->
+		    UInt64.mul
+		      (UInt64.div UInt64.max y)
+		      x
+		 ),
+		 (x,y))
+       | Rem (x,y) -> `Two (UInt64.rem, (x,y))
+       | SLeft (x,y) -> `Two ((fun x y -> UInt64.shift_left x (UInt64.to_int y)), (x,y))
+       | SRight (x,y) -> `Two ((fun x y -> UInt64.shift_right x (UInt64.to_int y)), (x,y))
+       | And (x,y) -> `Two (UInt64.logand, (x,y))
+       | XOr (x,y) -> `Two (UInt64.logxor, (x,y))
+       | Plus (x,y) -> `Two (UInt64.add, (x,y))
+       | Minus (x,y) -> `Two (UInt64.sub, (x,y))
+       | Negate n -> `One (UInt64.complement, n)
+       | Negative m -> `One ((UInt64.sub (UInt64.zero)), m)
+    )
+      x
   with
-    `Zero t -> `Zero t
-  | `One (op, x) -> `One (op, term x)
-  | `Two (op,(x,y)) -> `Two (op, term x, term y)
+      `Zero t -> `Zero t
+    | `One (op, x) -> `One (op, term x)
+    | `Two (op,(x,y)) -> `Two (op, term x, term y)
 
 let instruction =
   function

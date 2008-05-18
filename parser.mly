@@ -54,20 +54,20 @@ primary : Symbol { Symbol $1 }
 	| DQuote { Str $1 }
 
 term : primary { Term $1 }
-      | term Mul term { Mul ($1,$3) }
-      | term Div term { Div ($1,$3) }
-      | term FracDiv term { FracDiv ($1,$3) }
-      | term Rem term { Rem ($1,$3) }
-      | term SLeft term { SLeft ($1,$3) }
-      | term SRight term { SRight ($1,$3) }
-      | term And term { And ($1,$3) }
-      | term XOr term { XOr ($1,$3) }
-      | term Plus term { Plus ($1,$3) }
-      | term Minus term { Minus ($1,$3) }
-      | Minus term %prec Negative { Negative $2 }
-      | Plus term %prec Positive { $2 }
-      | Negate term { Negate $2 }
-      | OpenParen term CloseParen { $2 }
+     | term Mul term { Mul ($1,$3) }
+     | term Div term { Div ($1,$3) }
+     | term FracDiv term { FracDiv ($1,$3) }
+     | term Rem term { Rem ($1,$3) }
+     | term SLeft term { SLeft ($1,$3) }
+     | term SRight term { SRight ($1,$3) }
+     | term And term { And ($1,$3) }
+     | term XOr term { XOr ($1,$3) }
+     | term Plus term { Plus ($1,$3) }
+     | term Minus term { Minus ($1,$3) }
+     | Minus term %prec Negative { Negative $2 }
+     | Plus term %prec Positive { $2 }
+     | Negate term { Negate $2 }
+     | OpenParen term CloseParen { $2 }
 
 instr_aux : EOI { [] }
           | term { [$1] }
