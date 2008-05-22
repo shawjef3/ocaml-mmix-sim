@@ -8,6 +8,8 @@ type convert =
   | Delayed of ((unit -> string array) * (UInt64.t array -> UInt64.t))
 
 module SMap = Map.Make(String)
+  
+
 
 module IMap = Map.Make(struct type t = int let compare = compare end)
 
@@ -16,7 +18,8 @@ struct
   type ('a,'b) t =
       {
 	at : UInt64.t;
-	numbered : IMap.t;
+	back : IMap.t;
+	forward : IMap.t;
 	named : SMap.t;
 	commands : 'a list;
 	errors : 'b list;
@@ -25,7 +28,8 @@ struct
   let init =
     {
       at = UInt64.zero;
-      numbered = IMap.empty;
+      back = IMap.empty;
+      forward = IMap.empty;
       named = SMap.empty;
       commands = [];
       errors = [];
@@ -42,18 +46,6 @@ struct
   let incr_four s = {s with at = UInt64.add four s.at}
 
   let incr_eight s = {s with at = UInt64.add eight s.at}
-
-  type label = IL of int | SL of string
-
-  let add_command s ?(label=None) c =
-    let s =
-      match label with
-	  IL i -> {s with numbered = IMap.add i s.at s.numbered}
-	| SL s -> {s with named = IMap.add s s.at s.named}
-    in
-    {s with
-       commands = c::s.commands
-    }
 
 end
 
@@ -119,13 +111,25 @@ let instruction =
 
 let program instructions =
   List.fold_right
-    (fun a accum ->
+    (fun a (n,accum) ->
        match instruction a with
-	 `I0 -> accum
-       | _ as i -> i::accum
+	 `I0 -> (n,accum)
+       | _ as i -> (n+1,i::accum)
     )
     instructions
-    []
+    (0,[])
+
+let program_array (n,program) =
+  let program = Array.of_list program in
+  Array.fold_left
+    (fun accum a ->
+       
+    )
+    Parser_state.init
+    program
+  
+
+
 
 let load_machine_int64 start instructions m =
   let start = UInt64.logand (UInt64.complement seven) start in
