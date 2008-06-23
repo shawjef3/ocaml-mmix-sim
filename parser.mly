@@ -2,6 +2,12 @@
 
   open Parsertypes
 
+(* instructions cannot span lines, so a line number is usually good
+enough for error reporting *)
+
+  let line () =
+    (Parsing.rhs_start_pos 1).Lexing.pos_lnum
+
 %}
 
 %token HexPrefix
@@ -34,7 +40,7 @@
 %nonassoc Negate Positive Negative
 %nonassoc Dollar
 
-%type <Parsertypes.instruction list> program
+%type <(int * Parsertypes.instruction) list> program
 %start program
 
 %%
@@ -73,10 +79,10 @@ instr_aux : EOI { [] }
           | term { [$1] }
 	  | term Comma instr_aux { $1::($3) }
 
-instruction : Symbol instr_aux { Instruction ($1,$2) }
-	    | Symbol Symbol instr_aux { LInstruction ($1,$2,$3) }
-	    | LocalLabel Symbol instr_aux { L2Instruction ($1,$2,$3) }
-	    | EOI { Empty }
+instruction : Symbol instr_aux { line (), Instruction ($1,$2) }
+	    | Symbol Symbol instr_aux { line (), LInstruction ($1,$2,$3) }
+	    | LocalLabel Symbol instr_aux { line (), L2Instruction ($1,$2,$3) }
+	    | EOI { -1, Empty }
 
 program : instruction { [$1] }
 	| instruction program { $1::($2) }

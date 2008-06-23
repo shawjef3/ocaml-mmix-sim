@@ -8,46 +8,8 @@ type convert =
   | Delayed of ((unit -> string array) * (UInt64.t array -> UInt64.t))
 
 module SMap = Map.Make(String)
-  
-
 
 module IMap = Map.Make(struct type t = int let compare = compare end)
-
-module Parser_state =
-struct
-  type ('a,'b) t =
-      {
-	at : UInt64.t;
-	back : IMap.t;
-	forward : IMap.t;
-	named : SMap.t;
-	commands : 'a list;
-	errors : 'b list;
-      }
-
-  let init =
-    {
-      at = UInt64.zero;
-      back = IMap.empty;
-      forward = IMap.empty;
-      named = SMap.empty;
-      commands = [];
-      errors = [];
-    }      
-
-  let two = UInt64.two
-
-  let four = UInt64.of_int 4
-
-  let eight = UInt64.of_int 8
-
-  let incr_two s = {s with at = UInt64.add two s.at}
-
-  let incr_four s = {s with at = UInt64.add four s.at}
-
-  let incr_eight s = {s with at = UInt64.add eight s.at}
-
-end
 
 let ophex s = UInt64.shift_left (hex_of_name s) 24
 
@@ -67,12 +29,12 @@ let rec primary = function
   | Char s -> `Bytes [s]
   | Str d -> `Bytes (let l = String.length d in
 		     let accum = ref [] in
-		    for i = l-1 downto 0 do
-		      accum := d.[i]::!accum
-		    done;
-		    !accum)
+		     for i = l-1 downto 0 do
+		       accum := d.[i]::!accum
+		     done;
+		     !accum)
 
-let term x =
+let rec term x =
   match
     (function
 	 Term t -> `Zero (primary t)
@@ -97,39 +59,41 @@ let term x =
     )
       x
   with
-      `Zero t -> `Zero t
-    | `One (op, x) -> `One (op, term x)
-    | `Two (op,(x,y)) -> `Two (op, term x, term y)
+    `Zero t -> `Zero t
+  | `One (op, x) -> `One (op, term x)
+  | `Two (op,(x,y)) -> `Two (op, term x, term y)
 
 let instruction =
   function
-      Instruction (name,args) -> `I1 (name, List.map term args)
-    | LInstruction (label,name,args) -> `I2 (label,name, List.map term args)
-    | L2Instruction (locallabel, name, args) ->
-	`I3 (locallabel, name, List.map term args)
-    | Empty -> `I0
+      (l : int), Instruction (name,args) -> `I1 (l, name, List.map term args)
+    | l, LInstruction (label,name,args) -> `I2 (l, label,name, List.map term args)
+    | l, L2Instruction (locallabel, name, args) ->
+	`I3 (l, locallabel, name, List.map term args)
+    | l, Empty -> `I0
 
-let program instructions =
-  List.fold_right
-    (fun a (n,accum) ->
-       match instruction a with
-	 `I0 -> (n,accum)
-       | _ as i -> (n+1,i::accum)
+let instructions x =
+  Array.of_list (List.filter ((<>) `I0) (List.map instruction (Parser.program Lexer.lex x)))
+
+let to_binary i =
+  Array.fold_right
+    (fun a accum ->
+       match a with
+	 `I1 (line, name, args) ->
+
+       | `I2 (line, label, name, args) ->
+	   
+       | `I3 (line, locallabel, name, args) ->
+	   
     )
-    instructions
-    (0,[])
-
-let program_array (n,program) =
-  let program = Array.of_list program in
-  Array.fold_left
-    (fun accum a ->
-       
-    )
-    Parser_state.init
-    program
-  
-
-
+    i
+    {
+      accum = Array.make (Array.length i) None;
+      symbols = SMap.empty;
+      mentions = SMap.empty;
+      warnings = [];
+      errors = [];
+      greg = 0;
+    }
 
 let load_machine_int64 start instructions m =
   let start = UInt64.logand (UInt64.complement seven) start in
