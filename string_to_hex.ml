@@ -1,3 +1,6 @@
+(*
+ocaml str.cma uInt64.cma memory.cma machine.cma parser.cma lexer.cma parsertypes.cma instructions_dummy.cma instructions.cma instructions_map.cma instruction_types.cma
+*)
 open Parsertypes
 open Instruction_types
 open Instructions
@@ -32,7 +35,7 @@ let rec primary = function
 		     for i = l-1 downto 0 do
 		       accum := d.[i]::!accum
 		     done;
-		     !accum)
+		     List.rev !accum)
 
 let rec term x =
   match
@@ -72,14 +75,37 @@ let instruction =
     | l, Empty -> `I0
 
 let instructions x =
-  Array.of_list (List.filter ((<>) `I0) (List.map instruction (Parser.program Lexer.lex x)))
+  List.filter ((<>) `I0) (List.map instruction (Parser.program Lexer.lex x))
+
+let arg_types i =
+  let aux2 = function
+      `Register _ -> true
+    | _ -> false
+  in
+  let rec aux = function
+    | `Zero p -> aux2 p
+    | `One (_,x) -> aux x
+    | `Two (_,x,y) -> aux x || aux y
+  in
+  let terms =
+    match i with
+      `I0 -> []
+    | `I1 (_,_,terms) -> terms
+    | `I2 (_,_,_,terms) -> terms
+    | `I3 (_,_,_,terms) -> terms
+  in
+  List.map (fun t -> if aux t then `Register else `Immediate) terms
+
+let typify i =
+  let i = instructions i in
+  List.combine i (List.map arg_types i)
 
 let to_binary i =
   Array.fold_right
-    (fun a accum ->
+    (fun (a,typ) accum ->
        match a with
 	 `I1 (line, name, args) ->
-
+	   
        | `I2 (line, label, name, args) ->
 	   
        | `I3 (line, locallabel, name, args) ->
@@ -87,7 +113,7 @@ let to_binary i =
     )
     i
     {
-      accum = Array.make (Array.length i) None;
+      accum = Hashtbl.make (Array.length i);
       symbols = SMap.empty;
       mentions = SMap.empty;
       warnings = [];
