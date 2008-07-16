@@ -4,12 +4,8 @@ module UIMap = Map.Make(UInt64)
 
 class byte b =
 object (this)
-  val byte =
-    if b < 0 || b > 255 then
-      invalid_arg "byte"
-    else
-      char_of_int b
-  method uint64 = (UInt64.of_int (int_of_char byte))
+  val byte = b
+  method uint64 = (UInt64.of_int (Byte.to_int byte))
   method uint64_shift n = UInt64.shift_left this#uint64 n
   method uint64_8 = this#uint64_shift 8
   method uint64_16 = this#uint64_shift 16
@@ -18,55 +14,21 @@ object (this)
   method uint64_40 = this#uint64_shift 40
   method uint64_48 = this#uint64_shift 48
   method uint64_56 = this#uint64_shift 56
-  method int = int_of_char byte
+  method int = Byte.to_int byte
   method signed =
-    if byte > '\127' then
-      Int64.of_int (- ((int_of_char byte) mod 128))
+    if byte > Byte.of_int 127 then
+      Int64.of_int (- ((Byte.to_int byte) mod 128))
     else
-      Int64.of_int (int_of_char byte)
+      Int64.of_int (Byte.to_int byte)
   method string16 =
     let str = "0x  " in
-    begin
-      (
-	let i = b mod 16 in
-	if i < 10 then
-	  str.[3] <- char_of_int (48+i)
-	else
-	  str.[3] <- char_of_int (87+i)
-      );
-      (
-	let i = (b / 16) mod 16 in
-	if i < 10 then
-	  str.[2] <- char_of_int (48+i)
-	else
-	  str.[2] <- char_of_int (87+i)
-      );
-    end;
+    let str' = Byte.to_string16 byte in
+    str.[2] <- str'.[2];
+    str.[3] <- str'.[3];
     str
   method string =
-    string_of_int (int_of_char byte)
+    Byte.to_string byte
 end
-
-  
-(*
-let byte b =
-  if b < 0 || b > 255 then
-    invalid_arg "byte"
-  else
-object (this)
-  val byte = char_of_int b
-  method uint64 = (UInt64.of_int (int_of_char byte))
-  method uint64_shift n = UInt64.shift_left this#uint64 n
-  method uint64_8 = this#uint64_shift 8
-  method uint64_16 = this#uint64_shift 16
-  method uint64_24 = this#uint64_shift 24
-  method uint64_32 = this#uint64_shift 32
-  method uint64_40 = this#uint64_shift 40
-  method uint64_48 = this#uint64_shift 48
-  method uint64_56 = this#uint64_shift 56
-  method int = int_of_char byte
-end
-*)
 
 let invert_mask = UInt64.complement
 
@@ -135,7 +97,7 @@ let setbyte m addr v =
     if v = zero then
       UIMap.remove addr m
     else
-      UIMap.add addr (new byte (to_int v)) m
+      UIMap.add addr (new byte (Byte.of_int (to_int v))) m
   with Invalid_argument "byte" -> invalid_arg "setbyte"
 
 let sign_byte b =
@@ -229,3 +191,7 @@ let getwyde_string m addr = to_string (getwyde m addr)
 let gettetra_string m addr = to_string (gettetra m addr)
 
 let getocta_string m addr = to_string (getocta m addr)
+
+include UIMap
+
+let compare = UIMap.compare (fun a b -> Byte.compare a#byte b#byte)
