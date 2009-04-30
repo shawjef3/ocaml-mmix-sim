@@ -24,7 +24,7 @@ type pos = One | Two | Three
 val spechex : string -> int
 val insert : pos -> UInt64.uInt64 -> UInt64.uInt64
 type arg_temp = WF of UInt64.t | NWF of string * pos
-val handle_arg : pos -> Parsertypes.arg -> arg_temp
+val handle_arg : pos -> Parsertypes.primary -> [> `Replace of string | `Immediate of num | `At | `Register of num | `Forward of int | `Back of int | `Bytes of char list]
 val compose1 : string -> arg_temp -> convert
 val compose_aux : UInt64.t list -> UInt64.uInt64
 val compose2 : string -> arg_temp -> arg_temp -> convert

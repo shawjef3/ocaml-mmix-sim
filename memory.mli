@@ -34,7 +34,7 @@ val iter : (key -> 'a -> unit) -> 'a t -> unit
 val map : ('a -> 'b) -> 'a t -> 'b t
 val mapi : (key -> 'a -> 'b) -> 'a t -> 'b t
 val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-val compare : 'a t -> 'a t -> int
+val compare : UInt64.t UIMap.t -> UInt64.t UIMap.t -> int
 val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
 val invert_mask : UInt64.uInt64 -> UInt64.uInt64

@@ -5,35 +5,26 @@ let file = ref None
 
 let new_file t () =
   file := None;
-  Text.delete t ~start:((`Linechar (0,0),[])) ~stop:(`End,[]);;
-  
+  Text.delete t ~start:((`Linechar (0,0),[])) ~stop:(`End,[])
 
 let open_file t () =
-  let filename = getOpenFile () in
   try
-    (
-      let inchan = open_in filename in
-      let accum = ref [] in
-      (
-	try
-	  while true do
-	    accum := (input_line inchan)::!accum
-	  done
-	with End_of_file -> file := Some filename;
-      );
-      let accum = String.concat "\n" !accum in
-      Text.delete t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]);
-      Text.insert ~index:(`End,[]) ~text:accum t;
-    )
-  with
-    _ -> ()
-
+    let filename = getOpenFile () in
+    let fsize = (Unix.stat filename).Unix.st_size in
+    let buffer = String.create fsize in
+    input inchan buffer 0 fsize;
+    Text.delete t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]);
+    Text.insert ~index:(`End,[]) ~text:buffer t
+  with _ ->
+    Text.delete t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]);
+    Text.insert ~index:(`End,[]) ~text:"The file could not be read." t
+   
 let save_file t () =
   (
     match !file with
       None ->
 	file := Some (getSaveFile ())
-    | Some f -> ();
+    | _ -> ();
   );
   try
     match !file with
@@ -41,7 +32,8 @@ let save_file t () =
     | Some filename ->
 	let outchan = open_out filename in
 	output_string outchan (Text.get t ~start:(`Linechar (0,0),[]) ~stop:(`End,[]));
-	close_out outchan;
+	flush outchan;
+	close_out outchan
   with
     _ -> ()
 

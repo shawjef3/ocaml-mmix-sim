@@ -15,7 +15,7 @@ let copy m =
 
 let create rnum =
   {
-    memory = Memory.UIMap.empty;
+    memory = Memory.empty;
     r = Array.create rnum UInt64.zero;
     s = Array.create 32 UInt64.zero;
     at = UInt64.zero;

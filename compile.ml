@@ -35,4 +35,4 @@ let commands =
     []
 
 let _ =
-  List.iter (fun c -> print_endline c; ignore (Sys.command c)) commands
+  List.iter (fun c -> print_endline c; if Sys.command c = 0 then () else exit 1) commands

@@ -194,4 +194,6 @@ let getocta_string m addr = to_string (getocta m addr)
 
 include UIMap
 
-let compare = UIMap.compare (fun a b -> Byte.compare a#byte b#byte)
+(*let compare = UIMap.compare (fun a b -> Byte.compare a#byte b#byte)*)
+
+let compare = UIMap.compare UInt64.compare

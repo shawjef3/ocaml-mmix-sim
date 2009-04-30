@@ -37,7 +37,7 @@ let get_iuint l hex = to_int (get_iu l hex)
 
 let get_i l hex =
   let unsigned = get_iuint l hex in
-  let b = (new byte unsigned)#signed in
+  let b = (new byte (Byte.of_int unsigned))#signed in
   b
 
 (* get the 64-bit unsigned value of the register named by an argument *)

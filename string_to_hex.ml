@@ -6,9 +6,15 @@ open Instruction_types
 open Instructions
 open Instructions_map
 
+type instruction_arg = Back of int | Forward of int | Ready of UInt64.t
+
+type instruction = Zero of string
+		   | One of string * instruction_arg
+		   | Two of instruction_arg | Three of instruction_arg * instruction_arg * instruction_arg
+
 type convert =
     Complete of UInt64.t
-  | Delayed of ((unit -> string array) * (UInt64.t array -> UInt64.t))
+  | Delayed of instruction
 
 module SMap = Map.Make(String)
 
@@ -121,8 +127,10 @@ let to_binary i =
       greg = 0;
     }
 
+(* Load a machine with pre-parsed, binary instructions. *)
+
 let load_machine_int64 start instructions m =
-  let start = UInt64.logand (UInt64.complement seven) start in
+  let start = UInt64.logand Memory.seven' start in
   snd
     (List.fold_left
        (fun (addr,accum_m) instr ->
