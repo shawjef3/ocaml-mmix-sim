@@ -2,6 +2,8 @@ open UInt64
 
 module UIMap = Map.Make(UInt64)
 
+let two = UInt64.of_int64 2L
+
 class byte b =
 object (this)
   val byte = b
@@ -21,16 +23,12 @@ object (this)
     else
       Int64.of_int (Byte.to_int byte)
   method string16 =
-    let str = "0x  " in
-    let str' = Byte.to_string16 byte in
-    str.[2] <- str'.[2];
-    str.[3] <- str'.[3];
-    str
+    "0x" ^ Byte.to_string16 byte
   method string =
     Byte.to_string byte
 end
 
-let invert_mask = UInt64.complement
+let invert_mask = UInt64.lognot
 
 let byte_masks =
   let b0 = of_string "0x00000000000000ff" in
@@ -71,9 +69,9 @@ let three = of_int 3
 let four = of_int 4
 let seven = of_int 7
 
-let one' = complement one
-let three' = complement three
-let seven' = complement seven
+let one' = lognot one
+let three' = lognot three
+let seven' = lognot seven
 
 let getbyte m addr =
   try
@@ -102,7 +100,7 @@ let setbyte m addr v =
 
 let sign_byte b =
   if b > of_int 127 then
-    logor b (complement byte_masks.(0))
+    logor b (lognot byte_masks.(0))
   else
     b
 

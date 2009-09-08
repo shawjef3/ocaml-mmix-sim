@@ -4,6 +4,7 @@ open Machine
 
 let ident x = x
 
+let two = of_int64 2L
 let three = succ two
 let four = succ three
 let five = succ four
@@ -71,7 +72,7 @@ let get_yz hex =
   to_int64
     (
       if logand (of_int 0x8000) yzu > zero then
-	logor (complement wyde_masks.(0)) yzu
+	logor (lognot wyde_masks.(0)) yzu
       else
 	yzu
     )
@@ -80,7 +81,7 @@ let get_xyzu = logand (logor wyde_masks.(0) byte_masks.(2))
 
 let get_xyz hex =
   let xyzu = get_xyzu hex in
-  let mask = complement (logor byte_masks.(2) wyde_masks.(0)) in
+  let mask = lognot (logor byte_masks.(2) wyde_masks.(0)) in
   to_int64
     (
       if logand (of_int32 0x800000l) hex > zero then
@@ -387,9 +388,9 @@ let sttu = set_aux settetra tetra_masks.(0)
 
 let sttui = set_auxi settetra tetra_masks.(0)
 
-let stou = set_aux setocta UInt64.max
+let stou = set_aux setocta UInt64.max_int
 
-let stoui = set_aux setocta UInt64.max
+let stoui = set_aux setocta UInt64.max_int
 
 let sto = stou
 
@@ -461,14 +462,14 @@ let bit_aux_aux aux f =
 let bit_aux_aux2 aux f =
   aux
     (fun m x y z ->
-       m.r.(x) <- f y (complement z);
+       m.r.(x) <- f y (lognot z);
        incr_m m
     )
 
 let bit_aux_aux3 aux f =
   aux
     (fun m x y z ->
-       m.r.(x) <- complement (f y z);
+       m.r.(x) <- lognot (f y z);
        incr_m m
     )
 
@@ -520,7 +521,7 @@ let mux_aux aux =
   aux
     (fun m x y z ->
        let rM = m.s.(5) in
-       m.r.(x) <- logor (logand y rM) (logand z (complement rM));
+       m.r.(x) <- logor (logand y rM) (logand z (lognot rM));
        incr_m m
     )
 
@@ -583,7 +584,7 @@ let odifi = odif_aux aux_u_y_zi
 let sadd_aux aux =
   aux
     (fun m x y z ->
-       let temp = logand y (complement z) in
+       let temp = logand y (lognot z) in
        let rec count total = function
 	   0 -> total
 	 | n ->
@@ -626,13 +627,13 @@ let orml = wyde_aux logor 16
 
 let orl = wyde_aux logor 0
 
-let andnh = wyde_aux (fun x y -> UInt64.add x (complement y)) 48
+let andnh = wyde_aux (fun x y -> UInt64.add x (lognot y)) 48
 
-let andnmh = wyde_aux (fun x y -> UInt64.add x (complement y)) 32
+let andnmh = wyde_aux (fun x y -> UInt64.add x (lognot y)) 32
 
-let andnml = wyde_aux (fun x y -> UInt64.add x (complement y)) 16
+let andnml = wyde_aux (fun x y -> UInt64.add x (lognot y)) 16
 
-let andnl = wyde_aux (fun x y -> UInt64.add x (complement y)) 0
+let andnl = wyde_aux (fun x y -> UInt64.add x (lognot y)) 0
 
 let slu_aux aux  =
   aux
